@@ -47,6 +47,13 @@ def get_label_with_name(api, name):
     return this_label
 
 
+def get_project_with_name(api, name):
+    all_labels = api.projects.all()
+    this_project = list(
+        filter(lambda x: x['name'].lower() == name.lower(), all_labels))[0]
+    return this_project
+
+
 def get_tasks_for_label(api, label_id):
     all_tasks = api.items.all()
     this_label_tasks = list(
@@ -54,7 +61,14 @@ def get_tasks_for_label(api, label_id):
     return this_label_tasks
 
 
-def compare_tasks(api, label_id, todoist_tasks, jira_tasks):
+def get_tasks_for_project(api, project_id):
+    all_tasks = api.items.all()
+    this_project_tasks = list(
+        filter(lambda x: project_id == x['project_id'], all_tasks))
+    return this_project_tasks
+
+
+def compare_tasks(api, project_id, todoist_tasks, jira_tasks):
     created_items = 0
     for j in jira_tasks:
         todoist_name = "[{}] {}".format(j.key, j.fields.summary)
@@ -63,7 +77,7 @@ def compare_tasks(api, label_id, todoist_tasks, jira_tasks):
 
         if len(possible_todoist_tasks) == 0:
             if j.fields.resolution == None:
-                api.items.add(todoist_name, labels=[label_id])
+                api.items.add(todoist_name, project_id=project_id)
                 created_items += 1
                 print("adding {}".format(todoist_name))
 
@@ -87,13 +101,15 @@ def compare_tasks(api, label_id, todoist_tasks, jira_tasks):
 def main(label):
     print("starting sync at {}".format(datetime.now().isoformat()))
     api = get_todoist_api()
-    label = get_label_with_name(api, label)
-    todoist_tasks = get_tasks_for_label(api, label['id'])
+    # label = get_label_with_name(api, label)
+    project = get_project_with_name(api, label)
+    # todoist_tasks = get_tasks_for_label(api, label['id'])
+    todoist_tasks = get_tasks_for_project(api, project['id'])
 
     client = get_jira_client()
     jira_tasks = get_jira_tasks(client)
 
-    compare_tasks(api, label['id'], todoist_tasks, jira_tasks)
+    compare_tasks(api, project['id'], todoist_tasks, jira_tasks)
 
 
 if __name__ == "__main__":
